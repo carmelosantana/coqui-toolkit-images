@@ -1,0 +1,79 @@
+{
+    "name": "carmelosantana/coqui-toolkit-images",
+    "description": "AI image generation and library management toolkit for Coqui — generate, tag, categorize, and search images across OpenAI and Ollama backends.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "coqui",
+        "images",
+        "image-generation",
+        "openai",
+        "ollama",
+        "toolkit",
+        "php-agents"
+    ],
+    "authors": [
+        {
+            "name": "Carmelo Santana"
+        }
+    ],
+    "require": {
+        "php": "^8.4",
+        "symfony/http-client": "^7.4 || ^8.0"
+    },
+    "suggest": {
+        "ext-gd": "Required for ASCII image previews in the REPL"
+    },
+    "require-dev": {
+        "carmelosantana/php-agents": "^0.12",
+        "pestphp/pest": "^3.0",
+        "phpstan/phpstan": "^2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "CarmeloSantana\\CoquiToolkitImages\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "CarmeloSantana\\CoquiToolkitImages\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "php-agents": {
+            "toolkits": [
+                "CarmeloSantana\\CoquiToolkitImages\\ImagesToolkit"
+            ],
+            "description": "Generate, organize, tag, and search AI-generated images using OpenAI and Ollama backends. Supports PNG metadata embedding, ASCII preview, and workspace library management.",
+            "credentials": {
+                "OPENAI_API_KEY": {
+                    "description": "OpenAI API key for GPT Image 1.5 image generation.",
+                    "optional": true
+                },
+                "OLLAMA_HOST": {
+                    "description": "Optional Ollama host hint for local setup guidance. The current toolkit implementation shells out to the local `ollama` CLI for image generation.",
+                    "optional": true
+                },
+                "COQUI_IMAGE_MODEL": {
+                    "description": "Optional fallback image model in vendor/model format, for example openai/gpt-image-1.5 or ollama/x/z-image-turbo.",
+                    "optional": true
+                }
+            },
+            "gated": {
+                "image_generate": ["generate"]
+            }
+        }
+    },
+    "scripts": {
+        "test": "pest",
+        "analyse": "phpstan analyse --memory-limit=1G"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

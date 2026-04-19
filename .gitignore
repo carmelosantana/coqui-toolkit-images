@@ -1,0 +1,5 @@
+/vendor/
+/.phpstan-cache/
+/.idea/
+/.DS_Store
+composer.lock
