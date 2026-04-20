@@ -11,8 +11,10 @@ use CarmeloSantana\CoquiToolkitImages\Tool\ImageGenerateTool;
 use CarmeloSantana\CoquiToolkitImages\Tool\ImageLibraryTool;
 use CarmeloSantana\CoquiToolkitImages\Tool\ImagePreflightTool;
 use CarmeloSantana\CoquiToolkitImages\Tool\ImagePreviewTool;
+use CarmeloSantana\PHPAgents\Contract\ToolInterface;
 use CarmeloSantana\PHPAgents\Contract\ToolkitInterface;
 use CoquiBot\Coqui\Contract\ReplCommandProvider;
+use CoquiBot\Coqui\Contract\ToolkitCommandHandler;
 
 final class ImagesToolkit implements ToolkitInterface, ReplCommandProvider
 {
@@ -42,6 +44,9 @@ final class ImagesToolkit implements ToolkitInterface, ReplCommandProvider
         return new self(ImageToolkitRuntime::fromContext(ImageToolkitContext::fromArray($context)));
     }
 
+    /**
+     * @return list<ToolInterface>
+     */
     public function tools(): array
     {
         return [
@@ -88,6 +93,9 @@ final class ImagesToolkit implements ToolkitInterface, ReplCommandProvider
         GUIDELINES;
     }
 
+    /**
+     * @return list<ToolkitCommandHandler>
+     */
     public function commandHandlers(): array
     {
         return [new ImageCommandHandler($this->tools())];

@@ -7,15 +7,10 @@ use CarmeloSantana\PHPAgents\Contract\ToolkitInterface;
 use CoquiBot\Coqui\Contract\ToolkitCommandHelpProvider;
 use CoquiBot\Coqui\Contract\ReplCommandProvider;
 
-function requireCoquiReplContracts(): void
-{
-    if (!interface_exists('CoquiBot\\Coqui\\Contract\\ReplCommandProvider')) {
-        test()->markTestSkipped('Coqui REPL contract interfaces are not installed in this standalone toolkit environment.');
-    }
-}
-
 it('implements ToolkitInterface', function (): void {
-    requireCoquiReplContracts();
+    if (!interface_exists('CoquiBot\\Coqui\\Contract\\ReplCommandProvider')) {
+        $this->markTestSkipped('Coqui REPL contract interfaces are not installed in this standalone toolkit environment.');
+    }
 
     $toolkit = new ImagesToolkit(workspacePath: sys_get_temp_dir() . '/coqui-images-toolkit-test');
 
@@ -23,7 +18,9 @@ it('implements ToolkitInterface', function (): void {
 });
 
 it('exposes the expected tools', function (): void {
-    requireCoquiReplContracts();
+    if (!interface_exists('CoquiBot\\Coqui\\Contract\\ReplCommandProvider')) {
+        $this->markTestSkipped('Coqui REPL contract interfaces are not installed in this standalone toolkit environment.');
+    }
 
     $toolkit = new ImagesToolkit(workspacePath: sys_get_temp_dir() . '/coqui-images-toolkit-test');
     $names = array_map(static fn($tool) => $tool->name(), $toolkit->tools());
@@ -32,7 +29,9 @@ it('exposes the expected tools', function (): void {
 });
 
 it('produces valid function schemas', function (): void {
-    requireCoquiReplContracts();
+    if (!interface_exists('CoquiBot\\Coqui\\Contract\\ReplCommandProvider')) {
+        $this->markTestSkipped('Coqui REPL contract interfaces are not installed in this standalone toolkit environment.');
+    }
 
     $toolkit = new ImagesToolkit(workspacePath: sys_get_temp_dir() . '/coqui-images-toolkit-test');
 
@@ -46,7 +45,9 @@ it('produces valid function schemas', function (): void {
 });
 
 it('registers one structured repl command handler', function (): void {
-    requireCoquiReplContracts();
+    if (!interface_exists('CoquiBot\\Coqui\\Contract\\ReplCommandProvider')) {
+        $this->markTestSkipped('Coqui REPL contract interfaces are not installed in this standalone toolkit environment.');
+    }
 
     $toolkit = new ImagesToolkit(workspacePath: sys_get_temp_dir() . '/coqui-images-toolkit-test');
 
