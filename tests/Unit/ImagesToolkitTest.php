@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use CarmeloSantana\CoquiToolkitImages\ImagesToolkit;
 use CarmeloSantana\PHPAgents\Contract\ToolkitInterface;
+use CoquiBot\Coqui\Contract\ToolkitCommandHelpProvider;
+use CoquiBot\Coqui\Contract\ReplCommandProvider;
 
 function requireCoquiReplContracts(): void
 {
@@ -41,4 +43,19 @@ it('produces valid function schemas', function (): void {
         expect($schema['function']['name'])->toBeString();
         expect($schema['function']['parameters'])->toBeArray();
     }
+});
+
+it('registers one structured repl command handler', function (): void {
+    requireCoquiReplContracts();
+
+    $toolkit = new ImagesToolkit(workspacePath: sys_get_temp_dir() . '/coqui-images-toolkit-test');
+
+    expect($toolkit)->toBeInstanceOf(ReplCommandProvider::class);
+
+    $handlers = $toolkit->commandHandlers();
+
+    expect($handlers)->toHaveCount(1);
+    expect($handlers[0])->toBeInstanceOf(ToolkitCommandHelpProvider::class);
+    expect($handlers[0]->commandName())->toBe('image');
+    expect($handlers[0]->description())->toBe('Generate, preview, and manage workspace images through the image toolkit.');
 });

@@ -9,6 +9,10 @@ use CarmeloSantana\CoquiToolkitImages\Support\OllamaModelPullHelper;
 use CarmeloSantana\PHPAgents\Contract\ToolInterface;
 use CarmeloSantana\PHPAgents\Tool\ToolResult;
 use CoquiBot\Coqui\Contract\ToolkitCommandHandler;
+use CoquiBot\Coqui\Contract\ToolkitCommandExample;
+use CoquiBot\Coqui\Contract\ToolkitCommandHelp;
+use CoquiBot\Coqui\Contract\ToolkitCommandHelpEntry;
+use CoquiBot\Coqui\Contract\ToolkitCommandHelpProvider;
 use CoquiBot\Coqui\Contract\ToolkitReplContext;
 use CoquiBot\Coqui\Contract\ToolkitTabCompletionProvider;
 use Symfony\Component\Console\Input\InputInterface;
@@ -21,7 +25,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  * inspection through the Coqui REPL. Discovered automatically by
  * the SlashCommandRouter when the toolkit is enabled.
  */
-final class ImageCommandHandler implements ToolkitCommandHandler, ToolkitTabCompletionProvider
+final class ImageCommandHandler implements ToolkitCommandHandler, ToolkitCommandHelpProvider, ToolkitTabCompletionProvider
 {
     private const string GENERATE_OUTPUT_FORMAT = 'json';
 
@@ -43,7 +47,7 @@ final class ImageCommandHandler implements ToolkitCommandHandler, ToolkitTabComp
 
     public function subcommands(): array
     {
-        return ['generate', 'preview', 'list', 'search', 'get', 'tag', 'delete', 'config', 'help'];
+        return ['generate', 'preview', 'list', 'search', 'get', 'tag', 'delete', 'config'];
     }
 
     public function usage(): string
@@ -53,7 +57,75 @@ final class ImageCommandHandler implements ToolkitCommandHandler, ToolkitTabComp
 
     public function description(): string
     {
-        return 'Generate, preview, and manage workspace images through the image toolkit. Actions: generate, preview, list, search, get, tag, delete, config.';
+        return 'Generate, preview, and manage workspace images through the image toolkit.';
+    }
+
+    public function help(): ToolkitCommandHelp
+    {
+        return new ToolkitCommandHelp(
+            title: 'Image Generation & Management',
+            summary: 'Generate images, inspect previews, and manage the workspace image library from the Coqui REPL.',
+            subcommands: [
+                new ToolkitCommandHelpEntry(
+                    'generate',
+                    '/image generate <prompt> [--model=vendor/model] [--vendor=openai|ollama] [--tags=a,b] [--category=name]',
+                    'Generate an image and save it into the workspace image library.',
+                ),
+                new ToolkitCommandHelpEntry(
+                    'preview',
+                    '/image preview <path> [--width=60]',
+                    'Render an existing workspace image as a low-fidelity terminal preview.',
+                ),
+                new ToolkitCommandHelpEntry(
+                    'list',
+                    '/image list [--profile=name] [--vendor=openai|ollama]',
+                    'List saved image records, optionally filtered by profile or vendor.',
+                ),
+                new ToolkitCommandHelpEntry(
+                    'search',
+                    '/image search <query> [--category=name]',
+                    'Search saved image records by prompt, tags, model, vendor, or path.',
+                ),
+                new ToolkitCommandHelpEntry(
+                    'get',
+                    '/image get <record-id>',
+                    'Show the full metadata for one saved image record.',
+                ),
+                new ToolkitCommandHelpEntry(
+                    'tag',
+                    '/image tag <record-id> <tag1,tag2> [--category=name]',
+                    'Update tags and an optional category for a saved image record.',
+                ),
+                new ToolkitCommandHelpEntry(
+                    'delete',
+                    '/image delete <record-id>',
+                    'Delete a saved image record from the workspace image library.',
+                ),
+                new ToolkitCommandHelpEntry(
+                    'config',
+                    '/image config',
+                    'Show the resolved image-generation defaults, vendor settings, and workspace paths.',
+                ),
+            ],
+            examples: [
+                new ToolkitCommandExample(
+                    '/image generate Studio portrait of a red fox in cinematic light --vendor=openai --tags=portrait,fox',
+                    'Generate and tag an image in one step.',
+                ),
+                new ToolkitCommandExample(
+                    '/image search fox',
+                    'Find earlier images by prompt fragments or metadata.',
+                ),
+                new ToolkitCommandExample(
+                    '/image preview images/caelum/example.png --width=72',
+                    'Re-open an existing image as a terminal preview.',
+                ),
+            ],
+            notes: [
+                'When the resolved model is an Ollama image model that is not installed locally, Coqui asks for confirmation before running `ollama pull`.',
+                'The default save root is `workspace/images/{profile}/...`, and PNG metadata is embedded when supported.',
+            ],
+        );
     }
 
     public function handle(ToolkitReplContext $context, string $arg): void
@@ -61,7 +133,7 @@ final class ImageCommandHandler implements ToolkitCommandHandler, ToolkitTabComp
         $arg = trim($arg);
 
         if ($arg === '' || $arg === 'help') {
-            $this->renderHelp($context->io);
+            $context->io->text('Use /image or /image help from the Coqui REPL to view the image toolkit command reference.');
             return;
         }
 
@@ -267,7 +339,7 @@ final class ImageCommandHandler implements ToolkitCommandHandler, ToolkitTabComp
         if ($result->status->value === 'error') {
             $io->error($result->content);
             if (str_starts_with($result->content, 'Usage: /image')) {
-                $this->renderHelp($io);
+                $io->text('<fg=gray>Use /image or /image help for the image command reference.</>');
             }
             return;
         }
@@ -439,20 +511,5 @@ final class ImageCommandHandler implements ToolkitCommandHandler, ToolkitTabComp
         }
 
         return null;
-    }
-
-    private function renderHelp(SymfonyStyle $io): void
-    {
-        $io->section('/image');
-        $io->listing([
-            '/image generate <prompt> [--model=vendor/model] [--vendor=openai|ollama] [--tags=a,b] [--category=name]',
-            '/image preview <path> [--width=60]',
-            '/image list [--profile=name] [--vendor=openai|ollama]',
-            '/image search <query> [--category=name]',
-            '/image get <record-id>',
-            '/image tag <record-id> <tag1,tag2> [--category=name]',
-            '/image delete <record-id>',
-            '/image config',
-        ]);
     }
 }

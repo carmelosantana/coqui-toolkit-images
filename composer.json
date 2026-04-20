@@ -35,6 +35,9 @@
         }
     },
     "autoload-dev": {
+        "files": [
+            "stubs/coqui_repl_contracts.php"
+        ],
         "psr-4": {
             "CarmeloSantana\\CoquiToolkitImages\\Tests\\": "tests/"
         }
