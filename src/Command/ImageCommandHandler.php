@@ -45,6 +45,9 @@ final class ImageCommandHandler implements ToolkitCommandHandler, ToolkitCommand
         return 'image';
     }
 
+    /**
+     * @return list<string>
+     */
     public function subcommands(): array
     {
         return ['generate', 'preview', 'list', 'search', 'get', 'tag', 'delete', 'config'];
@@ -163,6 +166,10 @@ final class ImageCommandHandler implements ToolkitCommandHandler, ToolkitCommand
         $this->renderResult($context->io, $result, $command);
     }
 
+    /**
+     * @param list<string> $parts
+     * @return list<string>
+     */
     public function completeArguments(string $commandName, array $parts): array
     {
         // Only provide static subcommand completion for now
