@@ -13,6 +13,8 @@ use CarmeloSantana\PHPAgents\Tool\ToolResult;
 
 final readonly class ImageGenerateTool
 {
+    private const string OUTPUT_FORMAT_JSON = 'json';
+
     public function __construct(
         private ImageToolkitRuntime $runtime,
     ) {}
@@ -36,12 +38,26 @@ final readonly class ImageGenerateTool
                 new StringParameter('negative_prompt', 'Optional negative prompt, used when supported by the selected backend.', required: false),
                 new NumberParameter('seed', 'Optional deterministic seed when supported by the selected backend.', required: false),
                 new NumberParameter('steps', 'Optional generation step count when supported by the selected backend.', required: false),
+                new StringParameter('output_format', 'Optional output format. Internal callers may request `json` for structured rendering.', required: false),
             ],
             callback: function (array $input): ToolResult {
                 $record = $this->runtime->generateFromInput($input);
                 $preview = is_string($record['preview'] ?? null) ? $record['preview'] : null;
                 $previewReason = is_string($record['preview_unavailable_reason'] ?? null) ? $record['preview_unavailable_reason'] : null;
-                unset($record['preview'], $record['preview_unavailable_reason']);
+                $metadataReason = is_string($record['metadata_unavailable_reason'] ?? null) ? $record['metadata_unavailable_reason'] : null;
+
+                if (($input['output_format'] ?? null) === self::OUTPUT_FORMAT_JSON) {
+                    return ToolResult::success(json_encode([
+                        'message' => 'Image generated successfully.',
+                        'saved_path' => $record['path'],
+                        'preview' => $preview,
+                        'preview_unavailable_reason' => $previewReason,
+                        'metadata_unavailable_reason' => $metadataReason,
+                        'record' => $record,
+                    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?: '{}');
+                }
+
+                unset($record['preview'], $record['preview_unavailable_reason'], $record['metadata_unavailable_reason']);
 
                 $filePath = $record['path'];
                 $fileLink = 'file://' . $filePath;
@@ -52,6 +68,10 @@ final readonly class ImageGenerateTool
                     . 'Record ID: ' . $record['id'] . "\n"
                     . 'Model: ' . $record['vendor'] . '/' . $record['model'] . "\n"
                     . 'Metadata embedded: ' . (($record['metadata_embedded'] ?? false) ? 'yes' : 'no');
+
+                if ($metadataReason !== null) {
+                    $message .= "\nMetadata note: " . $metadataReason;
+                }
 
                 if ($preview !== null && $preview !== '') {
                     $message .= "\n\nPreview:\n" . $preview;

@@ -13,6 +13,7 @@ final readonly class ImageGenerationResult
         public string $vendor,
         public string $model,
         public string $filePath,
+        public ?string $format = null,
         public array $providerPayload = [],
     ) {}
 }

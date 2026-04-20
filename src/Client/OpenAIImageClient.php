@@ -53,11 +53,13 @@ final class OpenAIImageClient implements ImageClientInterface
         return $this->apiKey !== '';
     }
 
-    public function generate(ImageGenerationRequest $request, string $targetPath): ImageGenerationResult
+    public function generate(ImageGenerationRequest $request, string $targetPath, ?callable $progressCallback = null): ImageGenerationResult
     {
         if ($this->apiKey === '') {
             throw ImageToolkitException::openAiCredentialsMissing();
         }
+
+        $this->emitProgress($progressCallback, 'contacting-openai');
 
         $quality = $this->normalizeQuality($request->quality);
 
@@ -101,12 +103,14 @@ final class OpenAIImageClient implements ImageClientInterface
             mkdir($dir, 0755, true);
         }
 
+        $this->emitProgress($progressCallback, 'writing-image');
         file_put_contents($targetPath, $binary);
 
         return new ImageGenerationResult(
             vendor: 'openai',
             model: $request->model,
             filePath: $targetPath,
+            format: 'png',
             providerPayload: [
                 'revised_prompt' => $decoded['data'][0]['revised_prompt'] ?? null,
                 'size' => $payload['size'],
@@ -121,5 +125,14 @@ final class OpenAIImageClient implements ImageClientInterface
             'hd', 'high' => 'hd',
             default => 'standard',
         };
+    }
+
+    private function emitProgress(?callable $progressCallback, string $status): void
+    {
+        if ($progressCallback === null) {
+            return;
+        }
+
+        $progressCallback($status);
     }
 }

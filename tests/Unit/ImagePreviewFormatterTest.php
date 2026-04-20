@@ -58,3 +58,20 @@ it('returns unavailable reason for non-image file', function (): void {
     expect($result['preview'])->toBeNull();
     expect($result['unavailable_reason'])->toContain('not recognized');
 });
+
+it('returns unavailable reason for oversized files', function (): void {
+    if (!function_exists('imagecreatetruecolor')) {
+        $this->markTestSkipped('ext-gd not available');
+    }
+
+    $workspace = sys_get_temp_dir() . '/coqui-preview-large-' . bin2hex(random_bytes(4));
+    mkdir($workspace, 0755, true);
+    $path = $workspace . '/large.bin';
+    file_put_contents($path, str_repeat('0', (25 * 1024 * 1024) + 1));
+
+    $formatter = new ImagePreviewFormatter();
+    $result = @$formatter->format($path);
+
+    expect($result['preview'])->toBeNull();
+    expect($result['unavailable_reason'])->toContain('too large');
+});

@@ -15,7 +15,7 @@ final readonly class OllamaImageClient implements ImageClientInterface
         private string $binary = 'ollama',
     ) {}
 
-    public function generate(ImageGenerationRequest $request, string $targetPath): ImageGenerationResult
+    public function generate(ImageGenerationRequest $request, string $targetPath, ?callable $progressCallback = null): ImageGenerationResult
     {
         $this->assertCliAvailable();
         $this->assertModelAvailable($request->model);
@@ -42,16 +42,41 @@ final readonly class OllamaImageClient implements ImageClientInterface
             }
 
             fclose($pipes[0]);
-            $stdout = stream_get_contents($pipes[1]) ?: '';
+            stream_set_blocking($pipes[1], false);
+            stream_set_blocking($pipes[2], false);
+
+            $stdout = '';
+            $stderr = '';
+            $lastStatus = null;
+
+            while (true) {
+                $status = proc_get_status($process);
+                $stdout .= stream_get_contents($pipes[1]) ?: '';
+                $stderr .= stream_get_contents($pipes[2]) ?: '';
+
+                $parsedStatus = $this->extractProgressStatus($stderr);
+                if ($parsedStatus !== null && $parsedStatus !== $lastStatus) {
+                    $this->emitProgress($progressCallback, $parsedStatus);
+                    $lastStatus = $parsedStatus;
+                }
+
+                if (!$status['running']) {
+                    break;
+                }
+
+                usleep(100000);
+            }
+
+            $stdout .= stream_get_contents($pipes[1]) ?: '';
+            $stderr .= stream_get_contents($pipes[2]) ?: '';
             fclose($pipes[1]);
-            $stderr = stream_get_contents($pipes[2]) ?: '';
             fclose($pipes[2]);
             $exitCode = proc_close($process);
 
             $candidates = $this->listCandidateImages($isolatedDir);
 
             if ($candidates === []) {
-                $message = trim($stderr) !== '' ? trim($stderr) : trim($stdout);
+                $message = $this->summarizeOutput($stderr) ?? $this->summarizeOutput($stdout);
                 throw ImageToolkitException::providerFailure(
                     $message !== ''
                         ? 'Ollama did not produce an image file: ' . $message
@@ -60,20 +85,25 @@ final readonly class OllamaImageClient implements ImageClientInterface
             }
 
             $source = $this->resolveNewestPath($isolatedDir, $candidates);
-            rename($source, $targetPath);
+            $finalTargetPath = $this->targetPathForSource($targetPath, $source);
+            rename($source, $finalTargetPath);
 
             if ($exitCode !== 0 && trim($stderr) !== '') {
-                throw ImageToolkitException::providerFailure('Ollama generation failed: ' . trim($stderr));
+                throw ImageToolkitException::providerFailure('Ollama generation failed: ' . ($this->summarizeOutput($stderr) ?? trim($stderr)));
             }
+
+            $format = strtolower((string) pathinfo($finalTargetPath, PATHINFO_EXTENSION));
 
             return new ImageGenerationResult(
                 vendor: 'ollama',
                 model: $request->model,
-                filePath: $targetPath,
+                filePath: $finalTargetPath,
+                format: $format !== '' ? $format : null,
                 providerPayload: [
-                    'stdout' => trim($stdout),
-                    'stderr' => trim($stderr),
+                    'stdout' => $this->summarizeOutput($stdout),
+                    'stderr' => $this->summarizeOutput($stderr),
                     'exit_code' => $exitCode,
+                    'format' => $format !== '' ? $format : null,
                 ],
             );
         } finally {
@@ -150,6 +180,15 @@ final readonly class OllamaImageClient implements ImageClientInterface
         @rmdir($dir);
     }
 
+    private function emitProgress(?callable $progressCallback, string $status): void
+    {
+        if ($progressCallback === null) {
+            return;
+        }
+
+        $progressCallback($status);
+    }
+
     /**
      * @param list<string> $command
      * @return array{0: int, 1: string, 2: string}
@@ -175,5 +214,79 @@ final readonly class OllamaImageClient implements ImageClientInterface
         $exitCode = proc_close($process);
 
         return [$exitCode, $stdout, $stderr];
+    }
+
+    private function extractProgressStatus(string $buffer): ?string
+    {
+        $clean = $this->stripAnsi($buffer);
+        if ($clean === '') {
+            return null;
+        }
+
+        $lines = preg_split('/[\r\n]+/', $clean) ?: [];
+
+        for ($index = count($lines) - 1; $index >= 0; $index--) {
+            $line = trim(preg_replace('/\s+/', ' ', $lines[$index]) ?? '');
+            if ($line === '') {
+                continue;
+            }
+
+            if (str_contains($line, 'Generating')) {
+                return strtolower($line);
+            }
+
+            if (str_contains(strtolower($line), 'image saved')) {
+                return 'finalizing-image';
+            }
+        }
+
+        return null;
+    }
+
+    private function summarizeOutput(string $buffer): ?string
+    {
+        $clean = $this->stripAnsi($buffer);
+        if ($clean === '') {
+            return null;
+        }
+
+        $lines = preg_split('/[\r\n]+/', $clean) ?: [];
+        $summary = null;
+
+        for ($index = count($lines) - 1; $index >= 0; $index--) {
+            $line = trim(preg_replace('/\s+/', ' ', $lines[$index]) ?? '');
+            if ($line === '') {
+                continue;
+            }
+
+            $summary = $line;
+            break;
+        }
+
+        return $summary;
+    }
+
+    private function targetPathForSource(string $targetPath, string $sourcePath): string
+    {
+        $sourceExtension = strtolower((string) pathinfo($sourcePath, PATHINFO_EXTENSION));
+        if ($sourceExtension === '') {
+            return $targetPath;
+        }
+
+        $targetExtension = strtolower((string) pathinfo($targetPath, PATHINFO_EXTENSION));
+        if ($targetExtension === $sourceExtension) {
+            return $targetPath;
+        }
+
+        $targetStem = preg_replace('/\.[^.]+$/', '', $targetPath);
+
+        return (is_string($targetStem) ? $targetStem : $targetPath) . '.' . $sourceExtension;
+    }
+
+    private function stripAnsi(string $text): string
+    {
+        $clean = preg_replace('/\x1B(?:\[[0-9;?]*[A-Za-z]|\(B)/', '', $text);
+
+        return is_string($clean) ? trim($clean) : $text;
     }
 }

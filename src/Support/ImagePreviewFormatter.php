@@ -7,6 +7,8 @@ namespace CarmeloSantana\CoquiToolkitImages\Support;
 final class ImagePreviewFormatter
 {
     private const string CHARSET = ' .:-=+*#%@';
+    private const int MAX_FILE_BYTES = 25 * 1024 * 1024;
+    private const int MAX_PIXELS = 40_000_000;
 
     /**
      * @return array{preview: string|null, unavailable_reason: string|null}
@@ -15,6 +17,30 @@ final class ImagePreviewFormatter
     {
         if (!function_exists('imagecreatefromstring')) {
             return ['preview' => null, 'unavailable_reason' => 'ext-gd is not installed. Install it for ASCII image previews.'];
+        }
+
+        if (!is_file($path)) {
+            return ['preview' => null, 'unavailable_reason' => 'Could not read image file for preview.'];
+        }
+
+        $fileSize = @filesize($path);
+        if (is_int($fileSize) && $fileSize > self::MAX_FILE_BYTES) {
+            return ['preview' => null, 'unavailable_reason' => sprintf('Image is too large to preview safely (%s MB limit).', (string) (self::MAX_FILE_BYTES / 1024 / 1024))];
+        }
+
+        $imageInfo = @getimagesize($path);
+        if (!is_array($imageInfo)) {
+            return ['preview' => null, 'unavailable_reason' => 'Image format not recognized by GD for preview rendering.'];
+        }
+
+        $sourceWidth = (int) $imageInfo[0];
+        $sourceHeight = (int) $imageInfo[1];
+        if ($sourceWidth <= 0 || $sourceHeight <= 0) {
+            return ['preview' => null, 'unavailable_reason' => 'Image dimensions are invalid for preview rendering.'];
+        }
+
+        if (($sourceWidth * $sourceHeight) > self::MAX_PIXELS) {
+            return ['preview' => null, 'unavailable_reason' => 'Image dimensions are too large to preview safely.'];
         }
 
         $bytes = @file_get_contents($path);
@@ -29,7 +55,6 @@ final class ImagePreviewFormatter
 
         $sourceWidth = imagesx($image);
         $sourceHeight = imagesy($image);
-
         $height = max(1, (int) round(($sourceHeight / $sourceWidth) * $width * 0.5));
         $lines = [];
         $maxIndex = strlen(self::CHARSET) - 1;

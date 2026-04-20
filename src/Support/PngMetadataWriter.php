@@ -8,6 +8,13 @@ final class PngMetadataWriter
 {
     private const string PNG_SIGNATURE = "\x89PNG\r\n\x1A\n";
 
+    public function supports(string $path): bool
+    {
+        $bytes = @file_get_contents($path, false, null, 0, 8);
+
+        return is_string($bytes) && str_starts_with($bytes, self::PNG_SIGNATURE);
+    }
+
     /**
      * @param array<string, scalar|null> $metadata
      */

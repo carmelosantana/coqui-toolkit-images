@@ -6,5 +6,5 @@ namespace CarmeloSantana\CoquiToolkitImages\Contract;
 
 interface ImageClientInterface
 {
-    public function generate(ImageGenerationRequest $request, string $targetPath): ImageGenerationResult;
+    public function generate(ImageGenerationRequest $request, string $targetPath, ?callable $progressCallback = null): ImageGenerationResult;
 }

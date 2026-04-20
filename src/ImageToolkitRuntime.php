@@ -59,14 +59,17 @@ final class ImageToolkitRuntime
      */
     public function generateFromInput(array $input): array
     {
+        $progressCallback = is_callable($input['__progress_callback'] ?? null)
+            ? $input['__progress_callback']
+            : null;
         $request = $this->buildRequestFromInput($input);
 
         $directory = $this->pathResolver->resolveDirectory($request->saveDirectory, $request->profile);
         $targetPath = $this->pathResolver->buildTargetPath($directory, $request->fileHint);
 
         $result = match ($request->vendor) {
-            'openai' => $this->openAIClient->generate($request, $targetPath),
-            'ollama' => $this->ollamaClient->generate($request, $targetPath),
+            'openai' => $this->openAIClient->generate($request, $targetPath, $progressCallback),
+            'ollama' => $this->ollamaClient->generate($request, $targetPath, $progressCallback),
             default => throw ImageToolkitException::providerFailure('Unsupported image vendor: ' . $request->vendor),
         };
 
@@ -83,6 +86,12 @@ final class ImageToolkitRuntime
         ];
 
         $metadataEmbedded = $this->metadataWriter->write($result->filePath, $metadata);
+        $metadataUnavailableReason = null;
+        if (!$metadataEmbedded) {
+            $metadataUnavailableReason = $this->metadataWriter->supports($result->filePath)
+                ? 'Could not embed PNG metadata into the generated image.'
+                : 'Metadata embedding is currently available only for PNG images.';
+        }
         $previewResult = $this->previewFormatter->format($result->filePath);
 
         $record = [
@@ -90,6 +99,7 @@ final class ImageToolkitRuntime
             'path' => $result->filePath,
             'vendor' => $result->vendor,
             'model' => $result->model,
+            'format' => $result->format,
             'prompt' => $request->prompt,
             'profile' => $request->profile,
             'owner_name' => $request->ownerName,
@@ -106,6 +116,7 @@ final class ImageToolkitRuntime
         $this->recordStore->saveRecord($record);
         $record['preview'] = $previewResult['preview'];
         $record['preview_unavailable_reason'] = $previewResult['unavailable_reason'];
+        $record['metadata_unavailable_reason'] = $metadataUnavailableReason;
 
         return $record;
     }
