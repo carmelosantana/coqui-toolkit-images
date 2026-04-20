@@ -35,14 +35,47 @@ final readonly class ImagePathResolver
             mkdir($resolved, 0755, true);
         }
 
-        $realWorkspace = realpath($this->workspacePath);
+        $realWorkspace = $this->workspaceRealPath();
         $realResolved = realpath($resolved);
 
-        if ($realWorkspace === false || $realResolved === false || !str_starts_with($realResolved, $realWorkspace . '/')) {
+        if ($realResolved === false || !$this->isWithinWorkspace($realResolved, $realWorkspace)) {
             throw ImageToolkitException::saveOutsideWorkspace($saveDirectory);
         }
 
         return $realResolved;
+    }
+
+    public function resolveExistingPath(string $path): string
+    {
+        $trimmed = trim($path);
+        if ($trimmed === '') {
+            throw ImageToolkitException::previewPathRequired();
+        }
+
+        $workspace = $this->workspaceRealPath();
+        $candidate = $trimmed[0] === '/'
+            ? $trimmed
+            : $this->workspacePath . '/' . ltrim($trimmed, '/');
+
+        $directory = realpath(dirname($candidate));
+        if ($directory === false) {
+            throw ImageToolkitException::imageFileNotFound($path);
+        }
+
+        if (!$this->isWithinWorkspace($directory, $workspace)) {
+            throw ImageToolkitException::saveOutsideWorkspace($path);
+        }
+
+        $resolved = realpath($directory . '/' . basename($candidate));
+        if ($resolved === false || !is_file($resolved)) {
+            throw ImageToolkitException::imageFileNotFound($path);
+        }
+
+        if (!$this->isWithinWorkspace($resolved, $workspace)) {
+            throw ImageToolkitException::saveOutsideWorkspace($path);
+        }
+
+        return $resolved;
     }
 
     public function buildTargetPath(string $directory, string $fileHint, ?string $timestamp = null): string
@@ -55,6 +88,21 @@ final readonly class ImagePathResolver
             FileNameHelper::sanitizeSegment($fileHint, 'image'),
             $timestamp,
         );
+    }
+
+    private function workspaceRealPath(): string
+    {
+        $resolved = realpath($this->workspacePath);
+        if ($resolved === false) {
+            throw ImageToolkitException::saveOutsideWorkspace($this->workspacePath);
+        }
+
+        return $resolved;
+    }
+
+    private function isWithinWorkspace(string $resolvedPath, string $resolvedWorkspace): bool
+    {
+        return $resolvedPath === $resolvedWorkspace || str_starts_with($resolvedPath, $resolvedWorkspace . '/');
     }
 
 }

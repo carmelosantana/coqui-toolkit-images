@@ -7,7 +7,7 @@
 - Text-to-image generation with OpenAI (`gpt-image-1`) and Ollama CLI backends
 - Workspace image library with JSON index at `workspace/images/index.json`
 - PNG tEXt metadata embedding (prompt, vendor, model, profile, owner, tags, category)
-- ASCII art preview via `ext-gd` (optional)
+- Low-fidelity colored block previews via `ext-gd` (optional)
 - Atomic index writes to prevent corruption
 - Workspace path boundary enforcement
 - Configurable OpenAI timeout
@@ -18,6 +18,7 @@
 |---|---|
 | `image_preflight` | Check readiness before generation (credentials, model availability) |
 | `image_generate` | Generate and save an image |
+| `image_preview` | Render an existing workspace image as a low-fidelity REPL preview |
 | `image_library` | List, search, get, tag, delete, and inspect saved images |
 | `image_config` | Inspect the resolved image toolkit configuration |
 
@@ -27,6 +28,7 @@ When used with Coqui core, the `/image` slash command provides:
 
 ```
 /image generate <prompt> [--model=vendor/model] [--vendor=openai|ollama] [--tags=a,b] [--category=name]
+/image preview <path> [--width=60]
 /image list [--profile=name] [--vendor=openai|ollama]
 /image search <query> [--category=name]
 /image get <record-id>
@@ -60,6 +62,8 @@ Default output path:
 ```
 workspace/images/{profile-name}/{file-hint}-{timestamp}.png
 ```
+
+Generated-image responses and `image_preview` both emit ANSI-colored block previews using the brightness ramp `░ ░ ▒ ▓ █`, so the REPL can show a low-resolution impression of the image without opening an external viewer.
 
 ## Development
 

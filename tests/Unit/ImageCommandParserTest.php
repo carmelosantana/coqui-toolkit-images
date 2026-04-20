@@ -63,6 +63,21 @@ it('returns error for empty search query', function (): void {
     expect($input)->toHaveKey('__error');
 });
 
+it('parses preview input with width', function (): void {
+    $parser = new ImageCommandParser();
+    $input = $parser->parsePreviewInput('"images/generated/example image.png" --width=60');
+
+    expect($input['path'])->toBe('images/generated/example image.png');
+    expect($input['width'])->toBe(60);
+});
+
+it('returns error for empty preview path', function (): void {
+    $parser = new ImageCommandParser();
+    $input = $parser->parsePreviewInput('');
+
+    expect($input)->toHaveKey('__error');
+});
+
 it('parses get input with id', function (): void {
     $parser = new ImageCommandParser();
     $input = $parser->parseGetInput('img_abc123');

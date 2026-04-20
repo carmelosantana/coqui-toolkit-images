@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use CarmeloSantana\CoquiToolkitImages\Support\ImagePreviewFormatter;
 
-it('renders ASCII preview from a valid PNG', function (): void {
+it('renders a low-fidelity colored block preview from a valid PNG', function (): void {
     if (!function_exists('imagecreatetruecolor')) {
         $this->markTestSkipped('ext-gd not available');
     }
@@ -27,6 +27,8 @@ it('renders ASCII preview from a valid PNG', function (): void {
 
     expect($result['preview'])->toBeString();
     expect($result['preview'])->not->toBeEmpty();
+    expect($result['preview'])->toContain("\033[38;2;255;255;255m█");
+    expect($result['preview_format'])->toBe('ansi_blocks');
     expect($result['unavailable_reason'])->toBeNull();
 });
 
@@ -39,6 +41,7 @@ it('returns unavailable reason for nonexistent file', function (): void {
     $result = @$formatter->format('/nonexistent/path/image.png');
 
     expect($result['preview'])->toBeNull();
+    expect($result['preview_format'])->toBeNull();
     expect($result['unavailable_reason'])->toContain('Could not read');
 });
 
@@ -56,6 +59,7 @@ it('returns unavailable reason for non-image file', function (): void {
     $result = @$formatter->format($path);
 
     expect($result['preview'])->toBeNull();
+    expect($result['preview_format'])->toBeNull();
     expect($result['unavailable_reason'])->toContain('not recognized');
 });
 
@@ -73,5 +77,6 @@ it('returns unavailable reason for oversized files', function (): void {
     $result = @$formatter->format($path);
 
     expect($result['preview'])->toBeNull();
+    expect($result['preview_format'])->toBeNull();
     expect($result['unavailable_reason'])->toContain('too large');
 });

@@ -93,6 +93,29 @@ final class ImageCommandParser
     }
 
     /**
+     * Parse a preview subcommand string into tool input.
+     *
+     * @return array<string, mixed>
+     */
+    public function parsePreviewInput(string $arg): array
+    {
+        [$tokens, $options] = $this->parseTokensAndOptions($arg);
+        $path = trim(implode(' ', $tokens));
+
+        if ($path === '') {
+            return ['__error' => 'Usage: /image preview <path> [--width=60]'];
+        }
+
+        $input = ['path' => $path];
+
+        if (isset($options['width']) && is_numeric($options['width'])) {
+            $input['width'] = (int) $options['width'];
+        }
+
+        return $input;
+    }
+
+    /**
      * Parse a get subcommand string into tool input.
      *
      * @return array<string, mixed>

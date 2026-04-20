@@ -1,6 +1,6 @@
 {
     "name": "carmelosantana/coqui-toolkit-images",
-    "description": "AI image generation and library management toolkit for Coqui — generate, tag, categorize, and search images across OpenAI and Ollama backends.",
+    "description": "AI image generation and library management toolkit for Coqui — generate, preview, tag, categorize, and search images across OpenAI and Ollama backends.",
     "type": "library",
     "license": "MIT",
     "keywords": [
@@ -22,7 +22,7 @@
         "symfony/http-client": "^7.4 || ^8.0"
     },
     "suggest": {
-        "ext-gd": "Required for ASCII image previews in the REPL"
+        "ext-gd": "Required for low-fidelity colored image previews in the REPL"
     },
     "require-dev": {
         "carmelosantana/php-agents": "^0.12",
@@ -44,7 +44,7 @@
             "toolkits": [
                 "CarmeloSantana\\CoquiToolkitImages\\ImagesToolkit"
             ],
-            "description": "Generate, organize, tag, and search AI-generated images using OpenAI and Ollama backends. Supports PNG metadata embedding, ASCII preview, and workspace library management.",
+            "description": "Generate, preview, organize, tag, and search AI-generated images using OpenAI and Ollama backends. Supports PNG metadata embedding, low-fidelity REPL previews, and workspace library management.",
             "credentials": {
                 "OPENAI_API_KEY": {
                     "description": "OpenAI API key for GPT Image 1.5 image generation.",

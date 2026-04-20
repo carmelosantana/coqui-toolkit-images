@@ -23,7 +23,7 @@ final readonly class ImageGenerateTool
     {
         return new Tool(
             name: 'image_generate',
-            description: 'Generate an image from a natural-language prompt using the configured or explicitly selected image model. Saves the image into the workspace image library and returns the saved path, metadata summary, and an optional ASCII preview.',
+            description: 'Generate an image from a natural-language prompt using the configured or explicitly selected image model. Saves the image into the workspace image library and returns the saved path, metadata summary, and an optional low-fidelity colored block preview.',
             parameters: [
                 new StringParameter('prompt', 'Natural-language image prompt.', required: true),
                 new StringParameter('model', 'Optional model string in vendor/model format or a vendor-local model name when vendor is supplied separately.', required: false),
@@ -43,6 +43,7 @@ final readonly class ImageGenerateTool
             callback: function (array $input): ToolResult {
                 $record = $this->runtime->generateFromInput($input);
                 $preview = is_string($record['preview'] ?? null) ? $record['preview'] : null;
+                $previewFormat = is_string($record['preview_format'] ?? null) ? $record['preview_format'] : null;
                 $previewReason = is_string($record['preview_unavailable_reason'] ?? null) ? $record['preview_unavailable_reason'] : null;
                 $metadataReason = is_string($record['metadata_unavailable_reason'] ?? null) ? $record['metadata_unavailable_reason'] : null;
 
@@ -51,13 +52,14 @@ final readonly class ImageGenerateTool
                         'message' => 'Image generated successfully.',
                         'saved_path' => $record['path'],
                         'preview' => $preview,
+                        'preview_format' => $previewFormat,
                         'preview_unavailable_reason' => $previewReason,
                         'metadata_unavailable_reason' => $metadataReason,
                         'record' => $record,
                     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?: '{}');
                 }
 
-                unset($record['preview'], $record['preview_unavailable_reason'], $record['metadata_unavailable_reason']);
+                unset($record['preview'], $record['preview_format'], $record['preview_unavailable_reason'], $record['metadata_unavailable_reason']);
 
                 $filePath = $record['path'];
                 $fileLink = 'file://' . $filePath;
@@ -74,6 +76,10 @@ final readonly class ImageGenerateTool
                 }
 
                 if ($preview !== null && $preview !== '') {
+                    if ($previewFormat !== null) {
+                        $message .= "\nPreview format: " . $previewFormat;
+                    }
+
                     $message .= "\n\nPreview:\n" . $preview;
                 } elseif ($previewReason !== null) {
                     $message .= "\n\nPreview unavailable: " . $previewReason;

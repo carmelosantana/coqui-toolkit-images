@@ -48,3 +48,35 @@ it('returns correct images root', function (): void {
 
     expect($resolver->imagesRoot())->toBe('/home/test/workspace/images');
 });
+
+it('resolves an existing image path within the workspace', function (): void {
+    $workspace = sys_get_temp_dir() . '/coqui-path-existing-' . bin2hex(random_bytes(4));
+    mkdir($workspace . '/images', 0755, true);
+    $path = $workspace . '/images/example.png';
+    file_put_contents($path, 'png');
+
+    $resolver = new ImagePathResolver($workspace);
+
+    expect($resolver->resolveExistingPath('images/example.png'))->toBe(realpath($path));
+});
+
+it('rejects preview paths outside the workspace', function (): void {
+    $workspace = sys_get_temp_dir() . '/coqui-path-preview-escape-' . bin2hex(random_bytes(4));
+    $outside = sys_get_temp_dir() . '/coqui-path-preview-outside-' . bin2hex(random_bytes(4));
+    mkdir($workspace, 0755, true);
+    mkdir($outside, 0755, true);
+    $outsidePath = $outside . '/example.png';
+    file_put_contents($outsidePath, 'png');
+
+    $resolver = new ImagePathResolver($workspace);
+
+    $resolver->resolveExistingPath($outsidePath);
+})->throws(ImageToolkitException::class);
+
+it('throws when a preview image is missing', function (): void {
+    $workspace = sys_get_temp_dir() . '/coqui-path-preview-missing-' . bin2hex(random_bytes(4));
+    mkdir($workspace . '/images', 0755, true);
+    $resolver = new ImagePathResolver($workspace);
+
+    $resolver->resolveExistingPath('images/missing.png');
+})->throws(ImageToolkitException::class);

@@ -43,7 +43,7 @@ final class ImageCommandHandler implements ToolkitCommandHandler, ToolkitTabComp
 
     public function subcommands(): array
     {
-        return ['generate', 'list', 'search', 'get', 'tag', 'delete', 'config', 'help'];
+        return ['generate', 'preview', 'list', 'search', 'get', 'tag', 'delete', 'config', 'help'];
     }
 
     public function usage(): string
@@ -53,7 +53,7 @@ final class ImageCommandHandler implements ToolkitCommandHandler, ToolkitTabComp
 
     public function description(): string
     {
-        return 'Generate and manage workspace images through the image toolkit. Actions: generate, list, search, get, tag, delete, config.';
+        return 'Generate, preview, and manage workspace images through the image toolkit. Actions: generate, preview, list, search, get, tag, delete, config.';
     }
 
     public function handle(ToolkitReplContext $context, string $arg): void
@@ -78,6 +78,7 @@ final class ImageCommandHandler implements ToolkitCommandHandler, ToolkitTabComp
 
         $result = match ($command) {
             'generate' => $this->generate($context, $rest, $tools),
+            'preview' => $this->dispatchParsed($this->parser->parsePreviewInput($rest), $tools['image_preview']),
             'list' => $this->dispatchParsed($this->parser->parseListInput($rest), $tools['image_library']),
             'search' => $this->dispatchParsed($this->parser->parseSearchInput($rest), $tools['image_library']),
             'get' => $this->dispatchParsed($this->parser->parseGetInput($rest), $tools['image_library']),
@@ -110,7 +111,7 @@ final class ImageCommandHandler implements ToolkitCommandHandler, ToolkitTabComp
     }
 
     /**
-     * @return array{image_generate: ToolInterface, image_library: ToolInterface, image_config: ToolInterface, image_preflight?: ToolInterface|null}|null
+     * @return array{image_preflight?: ToolInterface|null, image_generate: ToolInterface, image_preview: ToolInterface, image_library: ToolInterface, image_config: ToolInterface}|null
      */
     private function resolveTools(ToolkitReplContext $context): ?array
     {
@@ -119,10 +120,11 @@ final class ImageCommandHandler implements ToolkitCommandHandler, ToolkitTabComp
             $resolved[$tool->name()] = $tool;
         }
 
-        if (isset($resolved['image_generate'], $resolved['image_library'], $resolved['image_config'])) {
+        if (isset($resolved['image_generate'], $resolved['image_preview'], $resolved['image_library'], $resolved['image_config'])) {
             return [
                 'image_preflight' => $resolved['image_preflight'] ?? null,
                 'image_generate' => $resolved['image_generate'],
+                'image_preview' => $resolved['image_preview'],
                 'image_library' => $resolved['image_library'],
                 'image_config' => $resolved['image_config'],
             ];
@@ -132,7 +134,7 @@ final class ImageCommandHandler implements ToolkitCommandHandler, ToolkitTabComp
     }
 
     /**
-     * @param array{image_generate: ToolInterface, image_library: ToolInterface, image_config: ToolInterface, image_preflight?: ToolInterface|null} $tools
+    * @param array{image_preflight?: ToolInterface|null, image_generate: ToolInterface, image_preview: ToolInterface, image_library: ToolInterface, image_config: ToolInterface} $tools
      */
     private function generate(ToolkitReplContext $context, string $arg, array $tools): ToolResult
     {
@@ -275,22 +277,25 @@ final class ImageCommandHandler implements ToolkitCommandHandler, ToolkitTabComp
             return;
         }
 
+        if ($command === 'preview') {
+            $this->renderPreviewResult($io, $result);
+            return;
+        }
+
         if (in_array($command, ['list', 'search', 'get', 'tag', 'delete', 'config'], true)) {
             $io->write($result->content);
             $io->newLine();
             return;
         }
 
-        $io->write(explode("\n", $result->content));
-        $io->newLine();
+        $this->renderMultiline($io, $result->content);
     }
 
     private function renderGenerateResult(SymfonyStyle $io, ToolResult $result): void
     {
         $payload = json_decode($result->content, true);
         if (!is_array($payload)) {
-            $io->write(explode("\n", $result->content));
-            $io->newLine();
+            $this->renderMultiline($io, $result->content);
 
             return;
         }
@@ -303,6 +308,7 @@ final class ImageCommandHandler implements ToolkitCommandHandler, ToolkitTabComp
             ? $payload['saved_path']
             : (is_string($record['path'] ?? null) ? $record['path'] : null);
         $preview = is_string($payload['preview'] ?? null) ? $payload['preview'] : null;
+        $previewFormat = is_string($payload['preview_format'] ?? null) ? $payload['preview_format'] : null;
         $previewReason = is_string($payload['preview_unavailable_reason'] ?? null) ? $payload['preview_unavailable_reason'] : null;
         $metadataReason = is_string($payload['metadata_unavailable_reason'] ?? null) ? $payload['metadata_unavailable_reason'] : null;
 
@@ -326,6 +332,10 @@ final class ImageCommandHandler implements ToolkitCommandHandler, ToolkitTabComp
             $lines[] = '<fg=gray>Format:</> ' . strtoupper((string) $record['format']);
         }
 
+        if ($previewFormat !== null) {
+            $lines[] = '<fg=gray>Preview format:</> ' . $previewFormat;
+        }
+
         $lines[] = '<fg=gray>Metadata embedded:</> ' . ((($record['metadata_embedded'] ?? false) === true) ? 'yes' : 'no');
 
         if ($metadataReason !== null) {
@@ -337,8 +347,7 @@ final class ImageCommandHandler implements ToolkitCommandHandler, ToolkitTabComp
         if ($preview !== null && trim($preview) !== '') {
             $io->newLine();
             $io->section('Preview');
-            $io->write(explode("\n", $preview));
-            $io->newLine();
+            $this->renderMultiline($io, $preview);
 
             return;
         }
@@ -347,6 +356,50 @@ final class ImageCommandHandler implements ToolkitCommandHandler, ToolkitTabComp
             $io->newLine();
             $io->text('<fg=gray>Preview unavailable:</> ' . $previewReason);
         }
+    }
+
+    private function renderPreviewResult(SymfonyStyle $io, ToolResult $result): void
+    {
+        $payload = json_decode($result->content, true);
+        if (!is_array($payload)) {
+            $this->renderMultiline($io, $result->content);
+
+            return;
+        }
+
+        $message = is_string($payload['message'] ?? null)
+            ? $payload['message']
+            : 'Image preview generated successfully.';
+        $path = is_string($payload['path'] ?? null) ? $payload['path'] : null;
+        $preview = is_string($payload['preview'] ?? null) ? $payload['preview'] : null;
+        $previewFormat = is_string($payload['preview_format'] ?? null) ? $payload['preview_format'] : null;
+
+        $io->success($message);
+
+        $lines = [];
+        if ($path !== null) {
+            $lines[] = '<fg=gray>Image path:</> ' . $path;
+            $lines[] = '<fg=gray>Open:</> file://' . $path;
+        }
+
+        if ($previewFormat !== null) {
+            $lines[] = '<fg=gray>Preview format:</> ' . $previewFormat;
+        }
+
+        if ($lines !== []) {
+            $io->text($lines);
+        }
+
+        if ($preview !== null && trim($preview) !== '') {
+            $io->newLine();
+            $io->section('Preview');
+            $this->renderMultiline($io, $preview);
+        }
+    }
+
+    private function renderMultiline(SymfonyStyle $io, string $content): void
+    {
+        $io->writeln(preg_split("/\r\n|\n|\r/", $content) ?: [$content]);
     }
 
     private function defaultGenerateContext(?string $resolvedModel): string
@@ -393,6 +446,7 @@ final class ImageCommandHandler implements ToolkitCommandHandler, ToolkitTabComp
         $io->section('/image');
         $io->listing([
             '/image generate <prompt> [--model=vendor/model] [--vendor=openai|ollama] [--tags=a,b] [--category=name]',
+            '/image preview <path> [--width=60]',
             '/image list [--profile=name] [--vendor=openai|ollama]',
             '/image search <query> [--category=name]',
             '/image get <record-id>',

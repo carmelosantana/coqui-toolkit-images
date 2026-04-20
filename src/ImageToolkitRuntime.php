@@ -92,7 +92,7 @@ final class ImageToolkitRuntime
                 ? 'Could not embed PNG metadata into the generated image.'
                 : 'Metadata embedding is currently available only for PNG images.';
         }
-        $previewResult = $this->previewFormatter->format($result->filePath);
+        $previewResult = $this->previewResultForPath($result->filePath);
 
         $record = [
             'id' => $recordId,
@@ -115,10 +115,36 @@ final class ImageToolkitRuntime
 
         $this->recordStore->saveRecord($record);
         $record['preview'] = $previewResult['preview'];
+        $record['preview_format'] = $previewResult['preview_format'];
         $record['preview_unavailable_reason'] = $previewResult['unavailable_reason'];
         $record['metadata_unavailable_reason'] = $metadataUnavailableReason;
 
         return $record;
+    }
+
+    /**
+     * @param array<string, mixed> $input
+     * @return array{path: string, preview: string|null, preview_format: string|null, preview_unavailable_reason: string|null}
+     */
+    public function previewFromInput(array $input): array
+    {
+        $path = $this->normalizeString($input['path'] ?? $input['image_path'] ?? null);
+        if ($path === null) {
+            throw ImageToolkitException::previewPathRequired();
+        }
+
+        $resolvedPath = $this->pathResolver->resolveExistingPath($path);
+        $previewResult = $this->previewResultForPath(
+            $resolvedPath,
+            $this->normalizeInt($input['width'] ?? null),
+        );
+
+        return [
+            'path' => $resolvedPath,
+            'preview' => $previewResult['preview'],
+            'preview_format' => $previewResult['preview_format'],
+            'preview_unavailable_reason' => $previewResult['unavailable_reason'],
+        ];
     }
 
     /**
@@ -383,5 +409,13 @@ final class ImageToolkitRuntime
         }
 
         return null;
+    }
+
+    /**
+     * @return array{preview: string|null, preview_format: string|null, unavailable_reason: string|null}
+     */
+    private function previewResultForPath(string $path, ?int $width = null): array
+    {
+        return $this->previewFormatter->format($path, $width ?? 40);
     }
 }
