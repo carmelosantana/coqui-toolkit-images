@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace CarmeloSantana\CoquiToolkitImages;
 
+use CarmeloSantana\CoquiToolkitImages\Command\ImageCommandHandler;
 use CarmeloSantana\CoquiToolkitImages\Contract\ImageToolkitContext;
 use CarmeloSantana\CoquiToolkitImages\Tool\ImageConfigTool;
 use CarmeloSantana\CoquiToolkitImages\Tool\ImageGenerateTool;
 use CarmeloSantana\CoquiToolkitImages\Tool\ImageLibraryTool;
 use CarmeloSantana\CoquiToolkitImages\Tool\ImagePreflightTool;
 use CarmeloSantana\PHPAgents\Contract\ToolkitInterface;
+use CoquiBot\Coqui\Contract\ReplCommandProvider;
 
-final class ImagesToolkit implements ToolkitInterface
+final class ImagesToolkit implements ToolkitInterface, ReplCommandProvider
 {
     private readonly ImageToolkitRuntime $runtime;
 
@@ -79,5 +81,10 @@ final class ImagesToolkit implements ToolkitInterface
         - Use the saved path when handing images off to `vision_analyze` or loop workflows
         </IMAGES-TOOLKIT-GUIDELINES>
         GUIDELINES;
+    }
+
+    public function commandHandlers(): array
+    {
+        return [new ImageCommandHandler($this->tools())];
     }
 }
