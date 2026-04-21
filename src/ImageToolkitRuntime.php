@@ -38,12 +38,12 @@ final class ImageToolkitRuntime
         $this->metadataWriter = $metadataWriter ?? new PngMetadataWriter();
         $this->previewFormatter = $previewFormatter ?? new ImagePreviewFormatter();
 
-        $vendors = is_array($this->context->imageConfig['vendors'] ?? null)
-            ? $this->context->imageConfig['vendors']
+        $providers = is_array($this->context->imageConfig['providers'] ?? null)
+            ? $this->context->imageConfig['providers']
             : [];
 
         $this->openAIClient = $openAIClient ?? OpenAIImageClient::fromSettings(
-            is_array($vendors['openai'] ?? null) ? $vendors['openai'] : [],
+            is_array($providers['openai'] ?? null) ? $providers['openai'] : [],
         );
         $this->ollamaClient = $ollamaClient ?? new OllamaImageClient();
     }
@@ -264,7 +264,7 @@ final class ImageToolkitRuntime
             'default_owner_name' => $this->context->defaultOwnerName,
             'primary_model' => $this->context->primaryModel,
             'env_image_model' => getenv('COQUI_IMAGE_MODEL') ?: null,
-            'config_path_hint' => 'agents.defaults.imageModel.primary',
+            'config_path_hint' => 'agents.defaults.model.imageModel',
             'image_config' => $this->context->imageConfig,
             'supported_vendors' => ['openai', 'ollama'],
         ];

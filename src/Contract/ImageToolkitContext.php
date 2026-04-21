@@ -85,9 +85,32 @@ final readonly class ImageToolkitContext
      */
     private static function extractImageConfig(mixed $config): array
     {
-        if (is_object($config) && method_exists($config, 'get')) {
-            $value = $config->get('agents.defaults.imageModel', []);
+        if (is_object($config) && method_exists($config, 'getImageConfig')) {
+            $value = $config->getImageConfig();
+
             return is_array($value) ? $value : [];
+        }
+
+        if (is_object($config) && method_exists($config, 'get')) {
+            $primary = $config->get('agents.defaults.model.imageModel');
+            $fallbacks = $config->get('agents.defaults.model.imageFallbacks', []);
+            $providers = $config->get('images.providers', []);
+            $ownerName = $config->get('images.ownerName');
+
+            $normalized = [
+                'primary' => is_string($primary) ? $primary : null,
+                'fallbacks' => is_array($fallbacks) ? $fallbacks : [],
+                'providers' => is_array($providers) ? $providers : [],
+            ];
+
+            if (is_string($ownerName) && trim($ownerName) !== '') {
+                $normalized['ownerName'] = trim($ownerName);
+            }
+
+            return array_filter(
+                $normalized,
+                static fn(mixed $value): bool => $value !== null,
+            );
         }
 
         return [];
