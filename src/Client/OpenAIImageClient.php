@@ -35,11 +35,11 @@ final class OpenAIImageClient implements ImageClientInterface
     {
         $apiKey = is_string($settings['apiKey'] ?? null) && $settings['apiKey'] !== ''
             ? $settings['apiKey']
-            : (string) (getenv('OPENAI_API_KEY') ?: '');
+            : (string) (getenv('OPENAI_IMAGE_API_KEY') ?: getenv('OPENAI_API_KEY') ?: '');
 
         $baseUrl = is_string($settings['baseUrl'] ?? null) && $settings['baseUrl'] !== ''
             ? rtrim($settings['baseUrl'], '/')
-            : self::DEFAULT_BASE_URL;
+            : (string) (getenv('OPENAI_IMAGE_BASE_URL') ?: self::DEFAULT_BASE_URL);
 
         $timeout = is_int($settings['timeout'] ?? null) && $settings['timeout'] > 0
             ? $settings['timeout']
