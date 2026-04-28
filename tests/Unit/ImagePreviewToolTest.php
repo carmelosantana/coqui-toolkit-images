@@ -33,6 +33,8 @@ it('renders a preview for an existing workspace image', function (): void {
     ]);
 
     expect($result->status->value)->toBe('success');
+    expect($result->mimeType)->toBe('application/json');
+    expect($result->displayHint)->toBe('structured-json');
 
     $payload = json_decode($result->content, true);
 

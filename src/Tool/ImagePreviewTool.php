@@ -39,12 +39,12 @@ final readonly class ImagePreviewTool
                     return ToolResult::error((string) ($payload['preview_unavailable_reason'] ?? 'Could not render image preview.'));
                 }
 
-                return ToolResult::success(json_encode([
+                return ToolResult::json([
                     'message' => 'Image preview generated successfully.',
                     'path' => $payload['path'],
                     'preview' => $preview,
                     'preview_format' => $payload['preview_format'],
-                ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?: '{}');
+                ]);
             },
         );
     }

@@ -48,7 +48,7 @@ final readonly class ImageGenerateTool
                 $metadataReason = is_string($record['metadata_unavailable_reason'] ?? null) ? $record['metadata_unavailable_reason'] : null;
 
                 if (($input['output_format'] ?? null) === self::OUTPUT_FORMAT_JSON) {
-                    return ToolResult::success(json_encode([
+                    return ToolResult::json([
                         'message' => 'Image generated successfully.',
                         'saved_path' => $record['path'],
                         'preview' => $preview,
@@ -56,7 +56,7 @@ final readonly class ImageGenerateTool
                         'preview_unavailable_reason' => $previewReason,
                         'metadata_unavailable_reason' => $metadataReason,
                         'record' => $record,
-                    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?: '{}');
+                    ]);
                 }
 
                 unset($record['preview'], $record['preview_format'], $record['preview_unavailable_reason'], $record['metadata_unavailable_reason']);
