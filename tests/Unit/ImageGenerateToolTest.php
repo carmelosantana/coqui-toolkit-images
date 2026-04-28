@@ -19,15 +19,26 @@ it('returns structured json metadata when image_generate requests json output', 
             expect($image)->not->toBeFalse();
 
             $blue = imagecolorallocate($image, 20, 120, 240);
-            expect($blue)->not->toBeFalse();
+            if ($blue === false) {
+                throw new RuntimeException('Failed to allocate test image color.');
+            }
+
             imagefill($image, 0, 0, $blue);
 
             ob_start();
             imagepng($image);
             $pngBytes = ob_get_clean();
             imagedestroy($image);
+
+            if ($pngBytes === false) {
+                throw new RuntimeException('Failed to capture generated PNG bytes.');
+            }
         } else {
             $pngBytes = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4//8/AwAI/AL+KDv8AAAAAElFTkSuQmCC', true);
+
+            if ($pngBytes === false) {
+                throw new RuntimeException('Failed to decode fixture PNG bytes.');
+            }
         }
 
         expect($pngBytes)->toBeString();
