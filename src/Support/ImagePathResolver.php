@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace CarmeloSantana\CoquiToolkitImages\Support;
 
 use CarmeloSantana\CoquiToolkitImages\Exception\ImageToolkitException;
+use CarmeloSantana\PathHelper\PathHelper;
 
 final readonly class ImagePathResolver
 {
@@ -25,10 +26,10 @@ final readonly class ImagePathResolver
 
         $trimmed = trim($saveDirectory);
 
-        if ($trimmed[0] === '/') {
-            $resolved = rtrim($trimmed, '/');
+        if (PathHelper::isAbsolutePath($trimmed)) {
+            $resolved = PathHelper::trimTrailingSlash($trimmed);
         } else {
-            $resolved = rtrim($this->workspacePath . '/' . ltrim($trimmed, '/'), '/');
+            $resolved = PathHelper::trimTrailingSlash($this->workspacePath . '/' . ltrim($trimmed, '/'));
         }
 
         if (!is_dir($resolved)) {
@@ -38,7 +39,7 @@ final readonly class ImagePathResolver
         $realWorkspace = $this->workspaceRealPath();
         $realResolved = realpath($resolved);
 
-        if ($realResolved === false || !$this->isWithinWorkspace($realResolved, $realWorkspace)) {
+        if ($realResolved === false || !PathHelper::isWithinBasePath($realResolved, $realWorkspace)) {
             throw ImageToolkitException::saveOutsideWorkspace($saveDirectory);
         }
 
@@ -53,7 +54,7 @@ final readonly class ImagePathResolver
         }
 
         $workspace = $this->workspaceRealPath();
-        $candidate = $trimmed[0] === '/'
+        $candidate = PathHelper::isAbsolutePath($trimmed)
             ? $trimmed
             : $this->workspacePath . '/' . ltrim($trimmed, '/');
 
@@ -62,7 +63,7 @@ final readonly class ImagePathResolver
             throw ImageToolkitException::imageFileNotFound($path);
         }
 
-        if (!$this->isWithinWorkspace($directory, $workspace)) {
+        if (!PathHelper::isWithinBasePath($directory, $workspace)) {
             throw ImageToolkitException::saveOutsideWorkspace($path);
         }
 
@@ -71,7 +72,7 @@ final readonly class ImagePathResolver
             throw ImageToolkitException::imageFileNotFound($path);
         }
 
-        if (!$this->isWithinWorkspace($resolved, $workspace)) {
+        if (!PathHelper::isWithinBasePath($resolved, $workspace)) {
             throw ImageToolkitException::saveOutsideWorkspace($path);
         }
 
@@ -84,7 +85,7 @@ final readonly class ImagePathResolver
 
         return sprintf(
             '%s/%s-%s.png',
-            rtrim($directory, '/'),
+            PathHelper::trimTrailingSlash($directory),
             FileNameHelper::sanitizeSegment($fileHint, 'image'),
             $timestamp,
         );
@@ -98,11 +99,6 @@ final readonly class ImagePathResolver
         }
 
         return $resolved;
-    }
-
-    private function isWithinWorkspace(string $resolvedPath, string $resolvedWorkspace): bool
-    {
-        return $resolvedPath === $resolvedWorkspace || str_starts_with($resolvedPath, $resolvedWorkspace . '/');
     }
 
 }
