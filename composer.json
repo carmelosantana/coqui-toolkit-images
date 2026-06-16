@@ -26,7 +26,7 @@
         "ext-gd": "Required for low-fidelity colored image previews in the REPL"
     },
     "require-dev": {
-        "carmelosantana/php-agents": "^0.13",
+        "carmelosantana/php-agents": ">=0.14",
         "pestphp/pest": "^3.0",
         "phpstan/phpstan": "^2.0"
     },
